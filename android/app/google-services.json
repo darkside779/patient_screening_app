@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "95310549913",
+    "project_id": "health-app-sd",
+    "storage_bucket": "health-app-sd.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:95310549913:android:d683c6ef832c8edb18b908",
+        "android_client_info": {
+          "package_name": "com.healthapp.patient_screening_app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyD5mtifPak1wVWe6X_YzXOfogQNd00nNzo"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

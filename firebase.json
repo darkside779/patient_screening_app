@@ -1,0 +1,26 @@
+{
+  "firestore": {
+    "rules": "firestore.rules",
+    "indexes": "firestore.indexes.json"
+  },
+  "flutter": {
+    "platforms": {
+      "android": {
+        "default": {
+          "projectId": "health-app-sd",
+          "appId": "1:95310549913:android:d683c6ef832c8edb18b908",
+          "fileOutput": "android/app/google-services.json"
+        }
+      },
+      "dart": {
+        "lib/firebase_options.dart": {
+          "projectId": "health-app-sd",
+          "configurations": {
+            "android": "1:95310549913:android:d683c6ef832c8edb18b908",
+            "web": "1:95310549913:web:080d2fb69e87374818b908"
+          }
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,96 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Helper function to check if user is admin
+    function isAdmin() {
+      return request.auth != null && 
+        exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+    }
+    
+    // Helper function to check if user is doctor
+    function isDoctor() {
+      return request.auth != null && 
+        exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'doctor';
+    }
+    
+    // Helper function to check if user is patient
+    function isPatient() {
+      return request.auth != null && 
+        exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'patient';
+    }
+    
+    // Helper function to check if doctor has access to patient
+    function doctorHasAccess(patientId) {
+      return exists(/databases/$(database)/documents/doctor_patient_access/$(request.auth.uid + '_' + patientId)) &&
+        get(/databases/$(database)/documents/doctor_patient_access/$(request.auth.uid + '_' + patientId)).data.status == 'approved';
+    }
+    
+    // Users collection rules
+    match /users/{userId} {
+      // Users can read and write their own document
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+      
+      // Allow authenticated users to read other user documents for search functionality
+      // This is needed for doctor/patient search to work
+      allow read: if request.auth != null;
+      
+      // Allow admins to update any user (for role fixing and management)
+      allow write: if request.auth != null && 
+        exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+      
+      // Allow user creation during registration
+      allow create: if request.auth != null && request.auth.uid == userId;
+    }
+    
+    // Symptom entries rules
+    match /symptom_entries/{entryId} {
+      // Users can read and write their own entries
+      allow read, write: if request.auth != null && 
+        request.auth.uid == resource.data.userId;
+      
+      // Doctors can read patient entries (simplified for debugging)
+      allow read: if request.auth != null && 
+        exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'doctor';
+      
+      // Admins can read all entries
+      allow read: if request.auth != null && 
+        exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+    }
+    
+    // Doctor-patient access control
+    match /doctor_patient_access/{accessId} {
+      // Allow authenticated users to read and write access records
+      // This is simplified for debugging - you can make it more restrictive later
+      allow read, write: if request.auth != null;
+    }
+    
+    // Doctor notes rules
+    match /doctor_notes/{noteId} {
+      // Allow authenticated users to read and write notes for debugging
+      allow read, write: if request.auth != null;
+    }
+    
+    // Reference data - symptoms and conditions
+    match /symptoms/{symptomId} {
+      allow read: if request.auth != null;
+      allow write: if isAdmin();
+    }
+    
+    match /conditions/{conditionId} {
+      allow read: if request.auth != null;
+      allow write: if isAdmin();
+    }
+    
+    // Deny all other access
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
