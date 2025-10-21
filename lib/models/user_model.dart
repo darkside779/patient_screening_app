@@ -14,6 +14,7 @@ class UserModel {
   final String? hospital;
   final bool? verified;
   final DateTime? verificationDate;
+  final String? verificationStatus; // 'pending', 'verified', 'rejected'
 
   const UserModel({
     required this.id,
@@ -26,6 +27,7 @@ class UserModel {
     this.hospital,
     this.verified,
     this.verificationDate,
+    this.verificationStatus,
   });
 
   // Factory constructor from Firestore document
@@ -42,6 +44,7 @@ class UserModel {
       hospital: data['hospital'],
       verified: data['verified'],
       verificationDate: (data['verificationDate'] as Timestamp?)?.toDate(),
+      verificationStatus: data['verificationStatus'] ?? 'pending',
     );
   }
 
@@ -62,6 +65,7 @@ class UserModel {
     if (verificationDate != null) {
       data['verificationDate'] = Timestamp.fromDate(verificationDate!);
     }
+    if (verificationStatus != null) data['verificationStatus'] = verificationStatus!;
 
     return data;
   }
@@ -78,6 +82,7 @@ class UserModel {
     String? hospital,
     bool? verified,
     DateTime? verificationDate,
+    String? verificationStatus,
   }) {
     return UserModel(
       id: id ?? this.id,
@@ -90,6 +95,7 @@ class UserModel {
       hospital: hospital ?? this.hospital,
       verified: verified ?? this.verified,
       verificationDate: verificationDate ?? this.verificationDate,
+      verificationStatus: verificationStatus ?? this.verificationStatus,
     );
   }
 

@@ -49,8 +49,16 @@ service cloud.firestore {
     
     // Symptom entries rules
     match /symptom_entries/{entryId} {
-      // Users can read and write their own entries
-      allow read, write: if request.auth != null && 
+      // Users can create entries with their own userId
+      allow create: if request.auth != null && 
+        request.auth.uid == request.resource.data.userId;
+      
+      // Users can read and update their own entries
+      allow read, update: if request.auth != null && 
+        request.auth.uid == resource.data.userId;
+      
+      // Users can delete their own entries
+      allow delete: if request.auth != null && 
         request.auth.uid == resource.data.userId;
       
       // Doctors can read patient entries (simplified for debugging)

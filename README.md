@@ -1,4 +1,4 @@
-# 🏥 Patient Screening App
+# 🏥 Intelligent Health System App
 
 A comprehensive **Flutter healthcare application** that enables patients to track symptoms, receive AI-powered health insights, and connect with verified doctors for professional medical consultation.
 

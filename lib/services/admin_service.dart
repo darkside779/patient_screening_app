@@ -84,8 +84,10 @@ class AdminService {
           .where('verified', isEqualTo: false)
           .get();
 
+      // Filter out rejected doctors (only show truly pending ones)
       return query.docs
           .map((doc) => UserModel.fromFirestore(doc))
+          .where((doctor) => doctor.verificationStatus != 'rejected')
           .toList();
     } catch (e) {
       return [];
@@ -99,6 +101,23 @@ class AdminService {
           .collection('users')
           .where('role', isEqualTo: 'doctor')
           .where('verified', isEqualTo: true)
+          .get();
+
+      return query.docs
+          .map((doc) => UserModel.fromFirestore(doc))
+          .toList();
+    } catch (e) {
+      return [];
+    }
+  }
+
+  // Get all rejected doctors
+  static Future<List<UserModel>> getRejectedDoctors() async {
+    try {
+      final query = await _firestore
+          .collection('users')
+          .where('role', isEqualTo: 'doctor')
+          .where('verificationStatus', isEqualTo: 'rejected')
           .get();
 
       return query.docs
@@ -124,6 +143,7 @@ class AdminService {
       // Update doctor verification status
       await _firestore.collection('users').doc(doctorId).update({
         'verified': true,
+        'verificationStatus': 'verified',
         'verificationDate': FieldValue.serverTimestamp(),
       });
 
@@ -150,19 +170,30 @@ class AdminService {
   // Reject/Revoke doctor verification
   static Future<AdminResult> rejectDoctor(String doctorId) async {
     try {
+      // Check if current user is admin
+      final isAdmin = await isCurrentUserAdmin();
+      if (!isAdmin) {
+        return AdminResult(
+          success: false,
+          message: 'Access denied: Admin privileges required',
+        );
+      }
+
       await _firestore.collection('users').doc(doctorId).update({
         'verified': false,
+        'verificationStatus': 'rejected',
         'verificationDate': null,
+        'rejectionDate': FieldValue.serverTimestamp(),
       });
 
       return AdminResult(
         success: true,
-        message: 'Doctor verification revoked',
+        message: 'Doctor verification rejected',
       );
     } catch (e) {
       return AdminResult(
         success: false,
-        message: 'Failed to revoke verification: $e',
+        message: 'Failed to reject doctor: $e',
       );
     }
   }
@@ -266,6 +297,7 @@ class AdminService {
       final doctorDoc = query.docs.first;
       await _firestore.collection('users').doc(doctorDoc.id).update({
         'verified': true,
+        'verificationStatus': 'verified',
         'verificationDate': FieldValue.serverTimestamp(),
       });
 

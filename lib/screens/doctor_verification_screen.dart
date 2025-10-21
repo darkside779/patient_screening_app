@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import '../services/auth_service.dart';
 
 class DoctorVerificationScreen extends StatefulWidget {
@@ -13,6 +14,7 @@ class DoctorVerificationScreen extends StatefulWidget {
 class _DoctorVerificationScreenState extends State<DoctorVerificationScreen> {
   bool _isLoading = true;
   bool _isVerified = false;
+  bool _isRejected = false;
   String? _userEmail;
 
   @override
@@ -32,19 +34,40 @@ class _DoctorVerificationScreenState extends State<DoctorVerificationScreen> {
       _userEmail = user.email;
     });
 
-    final isVerified = await AuthService.isDoctorVerified(user.uid);
-    
-    setState(() {
-      _isVerified = isVerified;
-      _isLoading = false;
-    });
+    try {
+      // Get full user data to check verification status
+      final userDoc = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(user.uid)
+          .get();
+      
+      if (userDoc.exists) {
+        final userData = userDoc.data() as Map<String, dynamic>;
+        final isVerified = userData['verified'] == true;
+        final verificationStatus = userData['verificationStatus'] ?? 'pending';
+        
+        setState(() {
+          _isVerified = isVerified;
+          _isRejected = verificationStatus == 'rejected';
+          _isLoading = false;
+        });
 
-    // If verified, redirect to doctor dashboard
-    if (isVerified) {
-      Future.delayed(const Duration(seconds: 2), () {
-        if (mounted) {
-          context.go('/doctor-dashboard');
+        // If verified, redirect to doctor dashboard
+        if (isVerified) {
+          Future.delayed(const Duration(seconds: 2), () {
+            if (mounted) {
+              context.go('/doctor-dashboard');
+            }
+          });
         }
+      } else {
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      setState(() {
+        _isLoading = false;
       });
     }
   }
@@ -78,7 +101,9 @@ class _DoctorVerificationScreenState extends State<DoctorVerificationScreen> {
               ? _buildLoadingState()
               : _isVerified
                   ? _buildVerifiedState()
-                  : _buildPendingState(),
+                  : _isRejected
+                      ? _buildRejectedState()
+                      : _buildPendingState(),
         ),
       ),
     );
@@ -168,6 +193,231 @@ class _DoctorVerificationScreenState extends State<DoctorVerificationScreen> {
             ],
           ),
         ),
+      ),
+    );
+  }
+
+  Widget _buildRejectedState() {
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(20.0),
+      child: Column(
+        children: [
+          // Header
+          Row(
+            children: [
+              Container(
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.2),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: IconButton(
+                  icon: const Icon(Icons.arrow_back, color: Colors.white),
+                  onPressed: _signOut,
+                ),
+              ),
+              const SizedBox(width: 16),
+              const Expanded(
+                child: Text(
+                  'Verification Rejected',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+            ],
+          ),
+
+          const SizedBox(height: 40),
+
+          // Main Content
+          Container(
+            padding: const EdgeInsets.all(32),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(20),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.1),
+                  blurRadius: 20,
+                  offset: const Offset(0, 10),
+                ),
+              ],
+            ),
+            child: Column(
+              children: [
+                // Rejected Icon
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: Colors.red[50],
+                    borderRadius: BorderRadius.circular(50),
+                  ),
+                  child: Icon(
+                    Icons.cancel,
+                    size: 48,
+                    color: Colors.red[600],
+                  ),
+                ),
+                
+                const SizedBox(height: 24),
+                
+                Text(
+                  'Verification Rejected',
+                  style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                        fontWeight: FontWeight.bold,
+                        color: Colors.red[700],
+                      ),
+                  textAlign: TextAlign.center,
+                ),
+                
+                const SizedBox(height: 16),
+                
+                Text(
+                  'Unfortunately, your verification request has been rejected. This may be due to incomplete or invalid documentation.',
+                  style: TextStyle(
+                    color: Colors.grey[600],
+                    fontSize: 16,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+
+                const SizedBox(height: 32),
+
+                // Contact Information
+                Container(
+                  padding: const EdgeInsets.all(20),
+                  decoration: BoxDecoration(
+                    color: Colors.red[50],
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: Colors.red[200]!),
+                  ),
+                  child: Column(
+                    children: [
+                      Row(
+                        children: [
+                          Icon(Icons.info_outline, color: Colors.red[600]),
+                          const SizedBox(width: 8),
+                          Text(
+                            'What can you do?',
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              color: Colors.red[800],
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 12),
+                      Text(
+                        '• Contact support for specific rejection reasons\n'
+                        '• Ensure all medical licenses are valid and current\n'
+                        '• Verify that all required documents are submitted\n'
+                        '• You may reapply after addressing the issues',
+                        style: TextStyle(
+                          color: Colors.red[700],
+                          fontSize: 14,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+
+                const SizedBox(height: 24),
+
+                // Contact Information
+                Container(
+                  padding: const EdgeInsets.all(20),
+                  decoration: BoxDecoration(
+                    color: Colors.grey[50],
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Column(
+                    children: [
+                      Icon(Icons.email_outlined, color: Colors.grey[600]),
+                      const SizedBox(height: 8),
+                      Text(
+                        'Registered Email',
+                        style: TextStyle(
+                          fontWeight: FontWeight.w600,
+                          color: Colors.grey[700],
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        _userEmail ?? 'Unknown',
+                        style: TextStyle(
+                          color: Colors.grey[600],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+
+                const SizedBox(height: 32),
+
+                // Action Buttons
+                Column(
+                  children: [
+                    SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton.icon(
+                        onPressed: _refreshStatus,
+                        icon: const Icon(Icons.refresh),
+                        label: const Text('Check Status Again'),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.teal[600],
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(vertical: 16),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                      ),
+                    ),
+                    
+                    const SizedBox(height: 12),
+                    
+                    SizedBox(
+                      width: double.infinity,
+                      child: OutlinedButton.icon(
+                        onPressed: _signOut,
+                        icon: const Icon(Icons.logout),
+                        label: const Text('Sign Out'),
+                        style: OutlinedButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(vertical: 16),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+
+                const SizedBox(height: 24),
+
+                // Support Information
+                Text(
+                  'Need help with verification?',
+                  style: TextStyle(
+                    fontWeight: FontWeight.w600,
+                    color: Colors.grey[700],
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'Contact support at verification@patientscreening.com',
+                  style: TextStyle(
+                    color: Colors.teal[600],
+                    fontSize: 14,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }

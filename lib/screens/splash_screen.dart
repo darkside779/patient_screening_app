@@ -194,7 +194,7 @@ class _SplashScreenState extends State<SplashScreen>
                           
                           // App Name
                           const Text(
-                            'Patient Screening',
+                            'Intelligent Health',
                             style: TextStyle(
                               fontSize: 32,
                               fontWeight: FontWeight.bold,
